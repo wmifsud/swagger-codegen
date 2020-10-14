@@ -387,19 +387,21 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             }
         }
 
-        final ISchemaHandler schemaHandler = config.getSchemaHandler();
-        schemaHandler.readProcessedModels(allProcessedModels);
+//        final ISchemaHandler schemaHandler = config.getSchemaHandler();
+//        schemaHandler.readProcessedModels(allProcessedModels);
+//
+//        final List<CodegenModel> composedModels = schemaHandler.getModels();
 
-        final List<CodegenModel> composedModels = schemaHandler.getModels();
-
-         if (composedModels != null && !composedModels.isEmpty()) {
-            for (CodegenModel composedModel : composedModels) {
-                final Map<String, Object> models = processModel(composedModel, config, schemas);
-                models.put("classname", config.toModelName(composedModel.name));
-                models.putAll(config.additionalProperties());
-                allProcessedModels.put(composedModel.name, models);
-            }
-        }
+//         if (composedModels != null && !composedModels.isEmpty()) {
+//            for (CodegenModel composedModel : composedModels) {
+//                if (!composedModel.getName().startsWith("AllOf")) {
+//                    final Map<String, Object> models = processModel(composedModel, config, schemas);
+//                    models.put("classname", config.toModelName(composedModel.name));
+//                    models.putAll(config.additionalProperties());
+//                    allProcessedModels.put(composedModel.name, models);
+//                }
+//            }
+//        }
 
         // post process all processed models
         allProcessedModels = config.postProcessAllModels(allProcessedModels);
@@ -920,6 +922,20 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 if (authMethods != null && !authMethods.isEmpty()) {
                     codegenOperation.authMethods = config.fromSecurity(authMethods);
                     codegenOperation.getVendorExtensions().put(CodegenConstants.HAS_AUTH_METHODS_EXT_NAME, Boolean.TRUE);
+                    for (CodegenSecurity security : codegenOperation.authMethods) {
+                        CodegenParameter authHeader = new CodegenParameter();
+                        authHeader.baseName = security.keyParamName;
+                        authHeader.paramName = security.type;
+                        authHeader.dataType = "String";
+                        authHeader.required = true;
+                        authHeader.getVendorExtensions().put(CodegenConstants.IS_HEADER_PARAM_EXT_NAME, true);
+                        codegenOperation.getHeaderParams().add(authHeader);
+                        codegenOperation.getAllParams().add(authHeader);
+                        codegenOperation.getContents().stream().findFirst().ifPresent(c -> {
+                            c.getParameters().forEach(p -> p.getVendorExtensions().put(CodegenConstants.HAS_MORE_EXT_NAME, true));
+                            c.getParameters().add(authHeader);
+                        });
+                    }
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
